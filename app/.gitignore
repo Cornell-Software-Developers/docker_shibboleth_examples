@@ -1,0 +1,6 @@
+composer.phar
+/config/config.inc.php
+/vendor/
+
+/docker-dev/.env
+/docker-dev/log/

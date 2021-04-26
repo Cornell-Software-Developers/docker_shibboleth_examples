@@ -1,0 +1,8 @@
+{
+    "name": "cornellsasit/blank-canvas",
+    "description": "Blank canvas",
+    "minimum-stability": "dev",
+    "type": "project",
+    "require": {
+    }
+}

@@ -1,0 +1,96 @@
+version: '3.3'
+services:
+  php:
+    container_name: app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        TIMEZONE: ${TIMEZONE}
+    volumes:
+      - ${PHP_APP_PATH}:/app
+
+  shib-sp3:
+    env_file: .env
+    build: shibboleth-sp3
+    container_name: shib-sp3
+    environment:
+      - SET_CONTAINER_TIMEZONE=true
+      - TZ=America/New_York
+    volumes:
+      - type: bind
+        source: $PWD/shibboleth-sp3/files/shibboleth2.xml
+        target: /etc/shibboleth/shibboleth2.xml
+
+      - type: bind
+        source: ./shibboleth-sp3/files/requestmap.xml
+        target: /etc/shibboleth/requestmap.xml
+
+      - ./shibboleth-sp3/files/shib-keys/:/etc/shibboleth/certs/
+
+        #     To use an odbc storage service, you will want to add these files.
+#     - type: bind
+#       source: ./shibboleth-sp3/files/odbc.ini
+#       target: /etc/odbc.ini
+
+#     - type: bind
+#       source: ./shibboleth-sp3/files/odbcinst.ini
+#       target: /etc/odbcinst.ini
+
+      # Sync time from host:
+      - /etc/localtime:/etc/localtime:ro
+
+  # this nginx knows vaguely about shibboleth.  At least enough to talk to a shib over fastcgi if configured to do so.
+  #  You will need to tell nginx about its
+  nginx-shib:
+    env_file: .env
+    build: nginx-shib
+    container_name: nginx-shib
+    environment:
+      - SET_CONTAINER_TIMEZONE=true
+      - TZ=America/New_York
+    volumes:
+      - type: bind
+        source: ./nginx-shib/etc/nginx/conf.d
+        target: /etc/nginx/conf.d
+      - ./nginx-shib/certs/:/etc/nginx/certs/:ro
+      # Sync time from host:
+      - /etc/localtime:/etc/localtime:ro
+      - ${PHP_APP_PATH}:/app
+
+  # this nginx is an SSL terminator; the only purpose is to give you ssl;
+  # it acts like an aws application load balancer.
+  nginx:
+    ports:
+      - 80:80
+      - 443:443
+    image: ployst/nginx-ssl-proxy
+    environment:
+      ENABLE_SSL: "true"
+      TARGET_SERVICE: nginx-shib
+      SERVER_NAME: dev.local
+    volumes:
+      - ./nginx-shib/certs/keyfile.crt:/etc/secrets/proxycert
+      - ./nginx-shib/certs/keyfile.key:/etc/secrets/proxykey
+      - ./nginx-shib/certs/dhparam.pem:/etc/secrets/dhparam
+    links:
+      - nginx-shib
+
+    
+#   apache-shib:
+#     env_file: .env
+#     image: apache-shib
+#     container_name: apache-shib
+#     build: ./apache-shib
+#     environment:
+#     - SET_CONTAINER_TIMEZONE=true
+#     - TZ=America/New_York
+#     volumes:
+#     - ./apache-shib/logs/apache2:/var/log/apache2
+#     - ./apache-shib/logs/shib:/var/log/shibboleth
+#     # Sync time from host:
+#     - /etc/localtime:/etc/localtime:ro
+#     - ${PHP_APP_PATH}:/app
+#     ports:
+#     - 90:80
+#   - 543:443

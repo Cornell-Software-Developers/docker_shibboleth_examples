@@ -1,0 +1,93 @@
+<SPConfig
+  xmlns="urn:mace:shibboleth:3.0:native:sp:config"
+  xmlns:conf="urn:mace:shibboleth:3.0:native:sp:config"
+  allowedSchemes="http https"
+  clockSkew="180">
+
+  <OutOfProcess tranLogFormat="%u|%s|%IDP|%i|%ac|%t|%attr|%n|%b|%E|%S|%SS|%L|%UA|%a" >
+    <!--
+    <Extensions>
+      <Library path="odbc-store.so" />
+    </Extensions>
+    -->
+  </OutOfProcess>
+
+  <UnixListener address="/var/run/shibd.sock" />
+
+  <RequestMapper type="XML" path="requestmap.xml" />
+
+  <ApplicationDefaults
+    entityID="a-shib-sp"
+    signing="false"
+    REMOTE_USER="uid eduPersonPrincipalName"
+    cipherSuites="DEFAULT:!EXP:!LOW:!aNULL:!eNULL:!DES:!IDEA:!SEED:!RC4:!3DES:!kRSA:!SSLv2:!SSLv3:!TLSv1:!TLSv1.1">
+
+  <Sessions
+    lifetime="28800"
+    timeout="3600"
+    relayState="ss:mem"
+    handlerSSL="true"
+    checkAddress="false"
+    cookieProps="; Secure; SameSite=Lax; HttpOnly; Path=/">
+
+    <!-- Configures SSO with Cornell IDP. -->
+    <SSO entityID="https://shibidp-test.cit.cornell.edu/idp/shibboleth">
+      SAML2
+    </SSO>
+
+    <!-- Extension service that generates "approximate" metadata based on SP configuration. -->
+    <Handler type="MetadataGenerator" Location="/Metadata" signing="false" />
+
+    <!-- Status reporting service. -->
+    <Handler type="Status" Location="/Status" acl="127.0.0.1 ::1" />
+
+    <!-- Session diagnostic service. -->
+    <Handler type="Session" Location="/Session" showAttributeValues="true" />
+
+  </Sessions>
+
+  <!--
+  Allows overriding of error template information/filenames. You can
+  also add your own attributes with values that can be plugged into the
+  templates, e.g., helpLocation below.
+  -->
+  <Errors
+    supportContact="root@localhost"
+    helpLocation="/about.html"
+    styleSheet=" /shibboleth-sp/main.css" />
+
+  <!-- load Cornell IDP's metadata -->
+  <MetadataProvider
+    type="XML"
+    validate="true"
+    url="https://shibidp-test.cit.cornell.edu/idp/shibboleth"
+    backingFilePath="cornell-idp.xml"
+    reloadInterval="7200" />
+
+  <!-- Map to extract attributes from SAML assertions. -->
+  <AttributeExtractor type="XML" validate="true" reloadChanges="false" path="attribute-map.xml" />
+
+  <!-- Default filtering policy for recognized attributes, lets other data pass. -->
+  <AttributeFilter type="XML" validate="true" path="attribute-policy.xml" />
+
+  <!-- Simple file-based resolvers for separate signing/encryption keys. -->
+  <CredentialResolver
+    type="File"
+    use="signing"
+    key="certs/sp.signing.key.pem"
+    certificate="certs/sp.signing.cert.pem" />
+  <CredentialResolver
+    type="File"
+    use="encryption"
+    key="certs/sp.encrypt.key.pem"
+    certificate="certs/sp.encrypt.cert.pem" />
+
+  </ApplicationDefaults>
+
+  <!-- Policies that determine how to process and authenticate runtime messages. -->
+  <SecurityPolicyProvider type="XML" validate="true" path="security-policy.xml" />
+
+  <!-- Low-level configuration about protocols and bindings available for use. -->
+  <ProtocolProvider type="XML" validate="true" reloadChanges="false" path="protocols.xml" />
+
+</SPConfig>
