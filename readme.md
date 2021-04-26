@@ -54,30 +54,33 @@ At this point, you should have 4 docker containers running.  Open a browser and 
 
 Once you accept the self signed certificate, you will get redirected to the TEST version of the shibboleth IDP.  Here, you can log in with your normal cornell credentials.  You'll then be sent back to dev.local where you should see your netid as REMOTE_USER.
 
+### Troubleshooting
+
+Certs and other files generated inside docker containers can be owned by `root`.  That will give you permission errors when trying to remove them.  It's a known issue with how this repo does some things.
+
+Feel free to `sudo rm -f ./nginx-shib/certs/*` and `sudo rm -f shibboleth-sp3/files/shib-keys/*`.  You can re-create them with `./go.sh init`.
+
 
 ### Architecture
 
+This stack uses 4 containers.  The first three (php, shib-sp3, and nginx-shib) are necessary to get shibboleth working with an application.  The 4th (nginx) is there to mimic a load balancer/ssl terminator.  That is fine for test, but in production, you might want something different.
+
+#### Why not put shib and nginx in the same container?
+
+You can.  It'll work.  It might be better.  I didn't because I thought shibd would be more simple to run than it is.  This architecture will expose fastcgi traffic between containers on the same host.  In sandbox, this will not be encrypted, but should be signed.  In production, it should be encrypted if I understand shibboleth correctly.
 
 
+#### TODOS:
 
+It would be nice to have an apache variant here.  There is one in apache that works, but I haven't had time to add it.
 
+ODBC is still relatively new.  It works but you need to manually set up the database by shibboleth consortium standards.  I haven't tested it under any real load.
 
+Memcached support is 100% missing.
 
+The example is really simple.  It'd be nice to have something more complex.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+And the big todo is to write up a guide on how to use environment to configure things.  This demo will work as is, but the secrets-entrypoint magic might need some explaining if the containers are going to be useful to others.
 
 
 
