@@ -1,4 +1,6 @@
 version: '3.3'
+volumes:
+  shib-socket:
 services:
   php:
     container_name: app
@@ -27,6 +29,7 @@ services:
         target: /etc/shibboleth/requestmap.xml
 
       - ./shibboleth-sp3/files/shib-keys/:/etc/shibboleth/certs/
+      - shib-socket:/var/run/shibd/
 
         #     To use an odbc storage service, you will want to add these files.
 #     - type: bind
