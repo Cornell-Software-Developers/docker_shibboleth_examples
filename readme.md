@@ -70,9 +70,21 @@ This stack uses 4 containers.  The first three (php, shib-sp3, and nginx-shib) a
 You can.  It'll work.  It might be better.  I didn't because I thought shibd would be more simple to run than it is.  This architecture will expose fastcgi traffic between containers on the same host.  In sandbox, this will not be encrypted, but should be signed.  In production, it should be encrypted if I understand shibboleth correctly.
 
 
+## Apache2/httpd
+Some support for apache2/httpd has been added.  If this interests you, check out the docker-compose-apache.yml file.
+
+Follow the steps for project init, then run 
+```
+./go.sh build # shortcut for docker-compose build
+docker-compose -f docker-compose-apache.yml up
+```
+
+
+
+
 #### TODOS:
 
-It would be nice to have an apache variant here.  There is one in apache that works, but I haven't had time to add it.
+The apache variant could use more/better documentation
 
 ODBC is still relatively new.  It works but you need to manually set up the database by shibboleth consortium standards.  I haven't tested it under any real load.
 
@@ -81,8 +93,3 @@ Memcached support is 100% missing.
 The example is really simple.  It'd be nice to have something more complex.
 
 And the big todo is to write up a guide on how to use environment to configure things.  This demo will work as is, but the secrets-entrypoint magic might need some explaining if the containers are going to be useful to others.
-
-
-
-
-
