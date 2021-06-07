@@ -1,0 +1,148 @@
+version: '3.3'
+volumes:
+  shib-socket:
+
+services:
+  php:
+    container_name: app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        TIMEZONE: ${TIMEZONE}
+    volumes:
+      - ${PHP_APP_PATH}:/app
+
+  shib-sp3:
+    env_file: .env
+    build: shibboleth-sp3
+    container_name: shib-sp3
+    environment:
+      - SET_CONTAINER_TIMEZONE=true
+      - TZ=America/New_York
+    volumes:
+      - type: bind
+        source: $PWD/shibboleth-sp3/files/shibboleth2.xml
+        target: /etc/shibboleth/shibboleth2.xml
+
+      - type: bind
+        source: ./shibboleth-sp3/files/requestmap.xml
+        target: /etc/shibboleth/requestmap.xml
+      - type: bind
+        source: ./shibboleth-sp3/files/shibd.logger
+        target: /etc/shibboleth/shibd.logger
+      - ./shibboleth-sp3/files/native.logger:/etc/shibboleth/native.logger
+      - ./shibboleth-sp3/files/console.logger:/etc/shibboleth/console.logger
+
+      - ./shibboleth-sp3/files/shib-keys/:/etc/shibboleth/certs/
+      - shib-socket:/var/run/shibd/
+
+        #     To use an odbc storage service, you will want to add these files.
+#     - type: bind
+#       source: ./shibboleth-sp3/files/odbc.ini
+#       target: /etc/odbc.ini
+
+#     - type: bind
+#       source: ./shibboleth-sp3/files/odbcinst.ini
+#       target: /etc/odbcinst.ini
+
+      # Sync time from host:
+      - /etc/localtime:/etc/localtime:ro
+
+  # this nginx knows vaguely about shibboleth.  At least enough to talk to a shib over fastcgi if configured to do so.
+  #  You will need to tell nginx about its
+# nginx-shib:
+#   env_file: .env
+#   build: nginx-shib
+#   container_name: nginx-shib
+#   environment:
+#     - SET_CONTAINER_TIMEZONE=true
+#     - TZ=America/New_York
+#   volumes:
+#     - type: bind
+#       source: ./nginx-shib/etc/nginx/conf.d
+#       target: /etc/nginx/conf.d
+#     - ./nginx-shib/certs/:/etc/nginx/certs/:ro
+#     # Sync time from host:
+#     - /etc/localtime:/etc/localtime:ro
+#     - ${PHP_APP_PATH}:/app
+
+
+  apache-shib:
+    env_file: .env
+    build: apache-shib
+    container_name: apache-shib
+    environment:
+      - SET_CONTAINER_TIMEZONE=true
+      - TZ=America/New_York
+    volumes:
+      - type: bind
+        source: $PWD/shibboleth-sp3/files/shibboleth-defaults/
+        target: /etc/shibboleth/
+
+      - type: bind
+        source: $PWD/shibboleth-sp3/files/shibboleth2.xml
+        target: /etc/shibboleth/shibboleth2.xml
+
+      - type: bind
+        source: ./shibboleth-sp3/files/requestmap.xml
+        target: /etc/shibboleth/requestmap.xml
+
+      - type: bind
+        source: ./nginx-shib/certs/
+        target: /etc/apache2/certs/
+
+      - ./apache-shib/conf/apache2.conf:/etc/apache2/apache2.conf:ro
+      - ./apache-shib/conf.d/:/etc/apache2/conf.d/:ro
+      - ./apache-shib/conf.sites.d/:/etc/apache2/conf.sites.d/:ro
+      - ./apache-shib/conf.modules.d/:/etc/apache2/conf.modules.d/:ro
+
+
+      - shib-socket:/var/run/shibd/
+
+      # Sync time from host:
+      - /etc/localtime:/etc/localtime:ro
+      - ${PHP_APP_PATH}:/app
+    ports:
+      - 80:80
+        #
+# this nginx is an SSL terminator; the only purpose is to give you ssl;
+# it acts like an aws application load balancer.
+# when using apache, we don't use this as an ssl terminator because it's hard to lie to shibboleth using apache.
+  nginx:
+    #ports: ~
+    image: ployst/nginx-ssl-proxy
+    environment:
+      ENABLE_SSL: "true"
+      # TARGET_SERVICE: nginx-shib
+      TARGET_SERVICE: apache-shib
+      SERVER_NAME: dev.local
+    volumes:
+      - $PWD/nginx-shib/certs/keyfile.crt:/etc/secrets/proxycert:ro
+      - $PWD/nginx-shib/certs/keyfile.key:/etc/secrets/proxykey:ro
+      - $PWD/nginx-shib/certs/dhparam.pem:/etc/secrets/dhparam:ro
+    links:
+      - apache-shib
+        #- nginx-shib
+    ports:
+      - 443:443
+        #- 80:80
+
+# This is left as a TODO.  Container exists, but isn't ready for production.
+#   apache-shib:
+#     env_file: .env
+#     image: apache-shib
+#     container_name: apache-shib
+#     build: ./apache-shib
+#     environment:
+#     - SET_CONTAINER_TIMEZONE=true
+#     - TZ=America/New_York
+#     volumes:
+#     - ./apache-shib/logs/apache2:/var/log/apache2
+#     - ./apache-shib/logs/shib:/var/log/shibboleth
+#     # Sync time from host:
+#     - /etc/localtime:/etc/localtime:ro
+#     - ${PHP_APP_PATH}:/app
+#     ports:
+#     - 90:80
+#   - 543:443

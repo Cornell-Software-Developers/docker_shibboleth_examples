@@ -12,13 +12,16 @@
     -->
   </OutOfProcess>
 
-  <UnixListener address="/var/run/shibd.sock" />
+  <UnixListener address="/var/run/shibd/shibd.sock" />
+  <!-- <TCPListener address="0.0.0.0" port="1600" acl="172.20.0.0/24"/> -->
 
-  <RequestMapper type="XML" path="requestmap.xml" />
+  <!--  <RequestMapper type="XML" path="requestmap.xml" /> -->
+  <RequestMapper type="Native" path="requestmap.xml" />
 
   <ApplicationDefaults
     entityID="a-shib-sp"
     signing="false"
+    requireTransportAuth="false"
     REMOTE_USER="uid eduPersonPrincipalName"
     cipherSuites="DEFAULT:!EXP:!LOW:!aNULL:!eNULL:!DES:!IDEA:!SEED:!RC4:!3DES:!kRSA:!SSLv2:!SSLv3:!TLSv1:!TLSv1.1">
 
